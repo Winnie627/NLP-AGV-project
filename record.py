@@ -204,7 +204,7 @@ if __name__ == '__main__':
         # print('请输入数字选择语言：')
         # devpid = input('1536：普通话(简单英文),1537:普通话(有标点),1737:英语,1637:粤语,1837:四川话\n')
         devpid = '1537'
-        # my_record()
+        my_record()
         TOKEN = getToken(HOST)
         speech = get_audio(FILEPATH)
         result = speech2text(speech, TOKEN, int(devpid))
