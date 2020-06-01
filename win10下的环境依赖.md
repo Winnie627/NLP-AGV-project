@@ -12,4 +12,4 @@ pip install playsound
 
 win10环境下修改playsound.py源文件
 
-![image-20200524163411464](C:\Users\Winnie Xu\AppData\Roaming\Typora\typora-user-images\image-20200524163411464.png)
+![image](https://github.com/Winnie627/NLP-AGV-project/raw/master/image-20200524163411464.png)
