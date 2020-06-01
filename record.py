@@ -11,8 +11,9 @@ import logging
 import re
 from playsound import playsound
 
+chunk = 1024
 framerate = 16000  # 采样率
-num_samples = 2000  # 采样点
+# num_samples = 2000  # 采样点
 channels = 1  # 声道
 sampwidth = 2  # 采样宽度2bytes
 FILEPATH = 'speech.wav'
@@ -114,17 +115,17 @@ def save_wave_file(filepath, data):
     wf.close()
 
 
-def my_record():
+def my_record(rec_time):
     pa = PyAudio()
     stream = pa.open(format=paInt16, channels=channels,
-                     rate=framerate, input=True, frames_per_buffer=num_samples)
+                     rate=framerate, input=True, frames_per_buffer=chunk)
     my_buf = []
     # count = 0
     t = time.time()
     print('正在录音...')
 
-    while time.time() < t + 4:  # 秒
-        string_audio_data = stream.read(num_samples)
+    for i in range(0, int(framerate/chunk*rec_time)):  # 秒
+        string_audio_data = stream.read(chunk)
         my_buf.append(string_audio_data)
     print('录音结束.')
     save_wave_file(FILEPATH, my_buf)
@@ -199,59 +200,68 @@ def text2speech(str_input, token):  # 输入要合成的文字
 if __name__ == '__main__':
     pattern = re.compile(u"[0-9_\u4E00-\u9FA5]+")
     logging.basicConfig(level=logging.INFO)
-    flag = 'y'
-    while flag.lower() == 'y':
-        # print('请输入数字选择语言：')
-        # devpid = input('1536：普通话(简单英文),1537:普通话(有标点),1737:英语,1637:粤语,1837:四川话\n')
-        devpid = '1537'
-        my_record()
+    a = input('是否开始选择语音指令控制？(y/n)：')
+    if a.lower() == 'y':
+        text = "我在"
         TOKEN = getToken(HOST)
-        speech = get_audio(FILEPATH)
-        result = speech2text(speech, TOKEN, int(devpid))
-        if result == -1:
-            flag = input('Continue?(y/n):')
-        result_re1 = re.findall(r'\d+.\d+', str(result))  # 当出现小数时，提取中文字符串里的小数，对应移动距离
-        result_re2 = re.findall(pattern, str(result))  # 整数时，提取纯文字字符串(不带标点）
-
-        print('你说的是不是:', result)
-        text = "你说的是不是%s" % (result)
-        # text = text.encode('utf-8')
-        # text = text.decode()
         text2speech(text, TOKEN)
-        if input('y/n:') == str('y'):
-            # 执行指令
-            # 运动量为整数（数字可能为大写）
-            pattern_int = re.compile('[0-9]+')
-            match = pattern_int.findall(str(result))
+        time.sleep(2)
 
-            if match:
-                if result_re1 == []:
-                    vol = match[0]  # 含有数字，使用数字作为移动距离/角度
+        flag = 'y'
+        while flag.lower() == 'y':
+            # print('请输入数字选择语言：')
+            # devpid = input('1536：普通话(简单英文),1537:普通话(有标点),1737:英语,1637:粤语,1837:四川话\n')
+            devpid = '1537'
+            my_record(5)
+            TOKEN = getToken(HOST)
+            speech = get_audio(FILEPATH)
+            result = speech2text(speech, TOKEN, int(devpid))
+            if result == -1:
+                flag = input('Continue?(y/n):')
+            result_re1 = re.findall(r'\d+.\d+', str(result))  # 当出现小数时，提取中文字符串里的小数，对应移动距离
+            result_re2 = re.findall(pattern, str(result))  # 整数时，提取纯文字字符串(不带标点）
+            print(result_re1)
+            print(result_re2)
+            print('你说的是不是:', result)
+            text = "你说的是不是%s" % (result)
+            text2speech(text, TOKEN)
+            if input('y/n:') == str('y'):
+                # 执行指令
+                # 运动量为整数（数字可能为大写）
+                pattern_int = re.compile('[0-9]+')
+                match = pattern_int.findall(str(result))
+
+                if match:
+                    if result_re1 == []:
+                        vol = match[0]  # 含有数字，使用数字作为移动距离/角度
+                    else:
+                        vol = result_re1[0]
                 else:
-                    vol = result_re1[0]
-            else:
-                vol = cn2dig(result_re2[0])  # 不含数字，将汉字数字转换
-            vol = float(vol)
+                    vol = cn2dig(result_re2[0])  # 不含数字，将汉字数字转换
+                vol = float(vol)
 
-            command = result_re2[0]
-            dire = direction(command)  # 方向对应的数字变量
-            print(dire)
-            if dire < 2:
-                # 移动距离数值
-                dist = vol
-                print("向 %s 移动 %f 米" % (get_key(DIRECTION, dire), dist))
-            elif dire >= 2 and dire < 4:
-                # 转动角度数值
-                ang = vol
-                print("向 %s 转动 %f 度" % (get_key(DIRECTION, dire), ang))
-            elif dire == 4:
-                print("停止命令")
+                command = result_re2[0]
+                dire = direction(command)  # 方向对应的数字变量
+                print(dire)
+                if dire < 2:
+                    # 移动距离数值
+                    dist = vol
+                    print("向 %s 移动 %f 米" % (get_key(DIRECTION, dire), dist))
+                elif dire >= 2 and dire < 4:
+                    # 转动角度数值
+                    ang = vol
+                    print("向 %s 转动 %f 度" % (get_key(DIRECTION, dire), ang))
+                elif dire == 4:
+                    print("停止命令")
 
-            elif dire == 5:
-                print("去充电命令")
+                elif dire == 5:
+                    print("去充电命令")
 
-            else:
-                print("去卧室命令")
+                else:
+                    print("去卧室命令")
 
 
-        flag = input('Continue?(y/n):')
+            flag = input('Continue?(y/n):')
+
+    else:
+        print("请手动执行控制！")
